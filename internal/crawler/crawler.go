@@ -95,7 +95,7 @@ func (c *Crawler) recoverAndCount(log zerolog.Logger) {
 	}
 }
 
-//Crawl - Scans the link for nested links and outputs them to the crawler.Result channel
+// Crawl - Scans the link for nested links and outputs them to the crawler.Result channel
 func (c *Crawler) Crawl(ctx context.Context, cancel context.CancelFunc, url string, withPanic bool, depth uint64, errCh chan<- error) {
 	log := ctx.Value(config.LoggerCtxKey).(zerolog.Logger)
 

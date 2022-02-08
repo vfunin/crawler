@@ -15,7 +15,7 @@ type Page struct {
 	Links []string
 }
 
-//Parse - returns page title with links
+// Parse - returns page title with links
 func Parse(url string, reader io.Reader) (*Page, error) {
 	var (
 		doc       *goquery.Document

@@ -23,7 +23,7 @@ func New(ctx context.Context, cancel context.CancelFunc, cfg *config.Configurati
 	return &Printer{ctx: ctx, cancel: cancel, cfg: cfg, errCh: errCh, crawler: crawler}
 }
 
-//Print - outputs links to the console or saves to a file
+// Print - outputs links to the console or saves to a file
 func (p *Printer) Print() {
 	var (
 		err        error
@@ -57,7 +57,7 @@ func (p *Printer) Print() {
 			}
 
 			fmt.Println(msg.URL, ";", msg.Title)
-
+		default:
 			if p.crawler.GetCnt() == 0 {
 				p.cancel()
 			}

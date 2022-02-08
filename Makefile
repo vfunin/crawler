@@ -10,7 +10,7 @@ all:
 
 .PHONY: run
 run:
-	go run main.go
+	go run cmd/crawler/main.go
 
 .PHONY: test
 test:
