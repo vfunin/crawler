@@ -4,7 +4,6 @@ import (
 	"context"
 	"crawler/internal/config"
 	"crawler/internal/fetcher"
-	"crawler/internal/parser"
 	"fmt"
 	"sync"
 	"time"
@@ -113,7 +112,14 @@ func (c *Crawler) Crawl(ctx context.Context, cancel context.CancelFunc, url stri
 	case <-ctx.Done():
 		return
 	default:
-		page := c.fetchURLAndGetPage(ctx, url, errCh)
+		f := fetcher.New(time.Duration(c.connectionTimeout) * time.Second)
+
+		page, err := f.Fetch(ctx, url)
+		if err != nil {
+			errCh <- err
+
+			return
+		}
 
 		c.result <- Result{
 			Title: page.Title,
@@ -136,22 +142,4 @@ func (c *Crawler) Crawl(ctx context.Context, cancel context.CancelFunc, url stri
 			panic(url)
 		}
 	}
-}
-
-func (c *Crawler) fetchURLAndGetPage(ctx context.Context, url string, errCh chan<- error) *parser.Page {
-	var (
-		page *parser.Page
-		err  error
-	)
-
-	f := fetcher.New(time.Duration(c.connectionTimeout) * time.Second)
-	page, err = f.Fetch(ctx, url)
-
-	if err != nil {
-		errCh <- err
-
-		return nil
-	}
-
-	return page
 }
