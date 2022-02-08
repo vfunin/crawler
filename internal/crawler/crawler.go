@@ -85,23 +85,21 @@ func (c *Crawler) canGoDeeper(depth uint64) bool {
 	return depth <= c.maxDepth
 }
 
+func (c *Crawler) recoverAndCount(log zerolog.Logger) {
+	c.DecCnt()
+
+	if iErr := recover(); iErr != nil {
+		err := fmt.Errorf("url: %v", iErr)
+
+		log.Err(err).Msg("panic during link parsing")
+	}
+}
+
 //Crawl - Scans the link for nested links and outputs them to the crawler.Result channel
 func (c *Crawler) Crawl(ctx context.Context, cancel context.CancelFunc, url string, withPanic bool, depth uint64, errCh chan<- error) {
 	log := ctx.Value(config.LoggerCtxKey).(zerolog.Logger)
 
-	defer func() {
-		c.DecCnt()
-
-		if iErr := recover(); iErr != nil {
-			err := fmt.Errorf("url: %v", iErr)
-
-			log.Err(err).Msg("panic during link parsing")
-		}
-
-		if c.GetCnt() == 0 {
-			cancel()
-		}
-	}()
+	defer c.recoverAndCount(log)
 
 	if c.isVisited(url) {
 		log.Debug().Msgf("url %s has been visited - skip", url)
@@ -115,19 +113,7 @@ func (c *Crawler) Crawl(ctx context.Context, cancel context.CancelFunc, url stri
 	case <-ctx.Done():
 		return
 	default:
-		var (
-			page *parser.Page
-			err  error
-		)
-
-		f := fetcher.New(time.Duration(c.connectionTimeout) * time.Second)
-		page, err = f.Fetch(ctx, url)
-
-		if err != nil {
-			errCh <- err
-
-			return
-		}
+		page := c.fetchURLAndGetPage(ctx, url, errCh)
 
 		c.result <- Result{
 			Title: page.Title,
@@ -150,4 +136,22 @@ func (c *Crawler) Crawl(ctx context.Context, cancel context.CancelFunc, url stri
 			panic(url)
 		}
 	}
+}
+
+func (c *Crawler) fetchURLAndGetPage(ctx context.Context, url string, errCh chan<- error) *parser.Page {
+	var (
+		page *parser.Page
+		err  error
+	)
+
+	f := fetcher.New(time.Duration(c.connectionTimeout) * time.Second)
+	page, err = f.Fetch(ctx, url)
+
+	if err != nil {
+		errCh <- err
+
+		return nil
+	}
+
+	return page
 }

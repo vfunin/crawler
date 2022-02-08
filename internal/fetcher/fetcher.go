@@ -26,7 +26,7 @@ func (f Fetcher) Fetch(ctx context.Context, url string) (page *parser.Page, err 
 
 	select {
 	case <-ctx.Done():
-		return nil, nil
+		return
 	default:
 		client := &http.Client{ //nolint:exhaustivestruct
 			Timeout: f.timeout,
@@ -49,6 +49,6 @@ func (f Fetcher) Fetch(ctx context.Context, url string) (page *parser.Page, err 
 			return nil, errors.Wrap(err, "parsing url")
 		}
 
-		return page, nil
+		return
 	}
 }
