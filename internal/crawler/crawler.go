@@ -16,7 +16,20 @@ type Result struct {
 	Title string
 }
 
-type Crawler struct {
+type Crawler interface {
+	Crawl(ctx context.Context, cancel context.CancelFunc, url string, withPanic bool, depth uint64, errCh chan<- error)
+	IncMaxDepth(step uint64)
+	IncCnt()
+	DecCnt()
+	GetCnt() uint64
+	ResultCh() <-chan Result
+	setVisited(url string)
+	isVisited(url string) bool
+	canGoDeeper(depth uint64) bool
+	recoverAndCount(log zerolog.Logger)
+}
+
+type crawler struct {
 	mu                sync.Mutex
 	result            chan Result
 	visited           map[string]struct{}
@@ -25,8 +38,8 @@ type Crawler struct {
 	cnt               uint64
 }
 
-func New(depth uint64, connectionTimeout int) *Crawler {
-	return &Crawler{
+func New(depth uint64, connectionTimeout int) Crawler {
+	return &crawler{
 		mu:                sync.Mutex{},
 		result:            make(chan Result),
 		visited:           make(map[string]struct{}),
@@ -36,43 +49,43 @@ func New(depth uint64, connectionTimeout int) *Crawler {
 	}
 }
 
-func (c *Crawler) IncMaxDepth(step uint64) {
+func (c *crawler) IncMaxDepth(step uint64) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.maxDepth += step
 }
 
-func (c *Crawler) IncCnt() {
+func (c *crawler) IncCnt() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.cnt++
 }
 
-func (c *Crawler) DecCnt() {
+func (c *crawler) DecCnt() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.cnt--
 }
 
-func (c *Crawler) GetCnt() uint64 {
+func (c *crawler) GetCnt() uint64 {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
 	return c.cnt
 }
 
-func (c *Crawler) setVisited(url string) {
+func (c *crawler) setVisited(url string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
 	c.visited[url] = struct{}{}
 }
 
-func (c *Crawler) ResultCh() <-chan Result {
+func (c *crawler) ResultCh() <-chan Result {
 	return c.result
 }
 
-func (c *Crawler) isVisited(url string) bool {
+func (c *crawler) isVisited(url string) bool {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	_, ok := c.visited[url]
@@ -80,11 +93,11 @@ func (c *Crawler) isVisited(url string) bool {
 	return ok
 }
 
-func (c *Crawler) canGoDeeper(depth uint64) bool {
+func (c *crawler) canGoDeeper(depth uint64) bool {
 	return depth <= c.maxDepth
 }
 
-func (c *Crawler) recoverAndCount(log zerolog.Logger) {
+func (c *crawler) recoverAndCount(log zerolog.Logger) {
 	c.DecCnt()
 
 	if iErr := recover(); iErr != nil {
@@ -95,7 +108,7 @@ func (c *Crawler) recoverAndCount(log zerolog.Logger) {
 }
 
 // Crawl - Scans the link for nested links and outputs them to the crawler.Result channel
-func (c *Crawler) Crawl(ctx context.Context, cancel context.CancelFunc, url string, withPanic bool, depth uint64, errCh chan<- error) {
+func (c *crawler) Crawl(ctx context.Context, cancel context.CancelFunc, url string, withPanic bool, depth uint64, errCh chan<- error) {
 	log := ctx.Value(config.LoggerCtxKey).(zerolog.Logger)
 
 	defer c.recoverAndCount(log)
@@ -122,7 +135,7 @@ func (c *Crawler) Crawl(ctx context.Context, cancel context.CancelFunc, url stri
 		}
 
 		c.result <- Result{
-			Title: page.Title,
+			Title: page.Title(),
 			URL:   url,
 		}
 
@@ -132,7 +145,7 @@ func (c *Crawler) Crawl(ctx context.Context, cancel context.CancelFunc, url stri
 			return
 		}
 
-		for _, link := range page.Links {
+		for _, link := range page.Links() {
 			c.IncCnt()
 
 			go c.Crawl(ctx, cancel, link, false, depth+1, errCh)

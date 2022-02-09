@@ -1,7 +1,6 @@
 package config
 
 import (
-	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -41,25 +40,82 @@ const (
 	DefaultConfigFilePath = ""
 )
 
-type Configuration struct {
-	NeedHelp     bool
-	URL          string        `yaml:"db_url" json:"db_url"`
-	MaxDepth     uint64        `yaml:"max_depth" json:"max_depth"`
-	Timeout      int           `yaml:"timeout" json:"timeout"`
-	DepthIncStep int           `yaml:"depth_inc_step" json:"depth_inc_step"`
-	Output       string        `yaml:"output" json:"output"`
-	JSONLog      bool          `yaml:"json_log" json:"json_log"`
-	WithPanic    bool          `yaml:"with_panic" json:"with_panic"`
-	LogLevel     zerolog.Level `yaml:"log_level" json:"log_level"`
+type Configuration interface {
+	FillFromEnv() (err error)
+	Validate() (err error)
+	LoadFromEnv() (err error)
+	LoadFromFile(path string) (err error)
+	LoadFromFlags(fc configuration)
+	ConfigureBaseLogger()
+	OutputToFile() bool
+	String() (result string)
+	ShowHelp()
+	NeedHelp() bool
+	URL() string
+	MaxDepth() uint64
+	Timeout() int
+	DepthIncStep() int
+	Output() string
+	JSONLog() bool
+	WithPanic() bool
+	LogLevel() zerolog.Level
 }
 
-func (c *Configuration) fillFromEnv() (err error) {
+type configuration struct {
+	needHelp     bool
+	url          string        `yaml:"url"`
+	maxDepth     uint64        `yaml:"max_depth"`
+	timeout      int           `yaml:"timeout"`
+	depthIncStep int           `yaml:"depth_inc_step"`
+	output       string        `yaml:"output"`
+	jsonLog      bool          `yaml:"json_log"`
+	withPanic    bool          `yaml:"with_panic"`
+	logLevel     zerolog.Level `yaml:"log_level"`
+}
+
+func (c *configuration) NeedHelp() bool {
+	return c.needHelp
+}
+
+func (c *configuration) URL() string {
+	return c.url
+}
+
+func (c *configuration) MaxDepth() uint64 {
+	return c.maxDepth
+}
+
+func (c *configuration) Timeout() int {
+	return c.timeout
+}
+
+func (c *configuration) DepthIncStep() int {
+	return c.depthIncStep
+}
+
+func (c *configuration) Output() string {
+	return c.output
+}
+
+func (c *configuration) JSONLog() bool {
+	return c.jsonLog
+}
+
+func (c *configuration) WithPanic() bool {
+	return c.withPanic
+}
+
+func (c *configuration) LogLevel() zerolog.Level {
+	return c.logLevel
+}
+
+func (c *configuration) FillFromEnv() (err error) {
 	if value := os.Getenv("URL"); value != "" {
-		c.URL = value
+		c.url = value
 	}
 
 	if value := os.Getenv("OUTPUT"); value != "" {
-		c.Output = value
+		c.output = value
 	}
 
 	var v int
@@ -69,7 +125,7 @@ func (c *Configuration) fillFromEnv() (err error) {
 			return
 		}
 
-		c.MaxDepth = uint64(v)
+		c.maxDepth = uint64(v)
 	}
 
 	if value := os.Getenv("DEPTH_INC_STEP"); value != "" {
@@ -77,7 +133,7 @@ func (c *Configuration) fillFromEnv() (err error) {
 			return
 		}
 
-		c.DepthIncStep = v
+		c.depthIncStep = v
 	}
 
 	if value := os.Getenv("TIMEOUT"); value != "" {
@@ -85,11 +141,11 @@ func (c *Configuration) fillFromEnv() (err error) {
 			return
 		}
 
-		c.Timeout = v
+		c.timeout = v
 	}
 
 	if value := os.Getenv("LOG_LEVEL"); value != "" {
-		if c.LogLevel, err = zerolog.ParseLevel(value); err != nil {
+		if c.logLevel, err = zerolog.ParseLevel(value); err != nil {
 			return err
 		}
 	}
@@ -97,98 +153,84 @@ func (c *Configuration) fillFromEnv() (err error) {
 	return err
 }
 
-func (c *Configuration) validate() (err error) {
-	if _, err = url.ParseRequestURI(c.URL); err != nil {
+func (c *configuration) Validate() (err error) {
+	if _, err = url.ParseRequestURI(c.url); err != nil {
 		return fmt.Errorf("wrong url; %w", err)
 	}
 
 	return
 }
 
-func (c *Configuration) loadFromEnv() (err error) {
+func (c *configuration) LoadFromEnv() (err error) {
 	if err = fillEnv(); err != nil {
 		return
 	}
 
-	if err = c.fillFromEnv(); err != nil {
+	if err = c.FillFromEnv(); err != nil {
 		return
 	}
 
 	return
 }
 
-func (c *Configuration) loadFromFile(path string) (err error) {
+func (c *configuration) LoadFromFile(path string) (err error) {
 	var content []byte
 
-	if filepath.Ext(path) == ".yaml" {
-		if content, err = os.ReadFile(path); err != nil {
-			return
-		}
-
-		if err = yaml.Unmarshal(content, &c); err != nil {
-			return
-		}
-
+	if filepath.Ext(path) != ".yaml" {
 		return
 	}
 
-	if filepath.Ext(path) == ".json" {
-		if content, err = os.ReadFile(path); err != nil {
-			return
-		}
-
-		if err = json.Unmarshal(content, &c); err != nil {
-			return
-		}
-
+	if content, err = os.ReadFile(path); err != nil {
 		return
 	}
+
+	err = yaml.Unmarshal(content, &c)
 
 	return
 }
 
-func (c *Configuration) loadFromFlags(fc Configuration) {
-	if fc.URL != "" {
-		c.URL = fc.URL
+func (c *configuration) LoadFromFlags(fc configuration) {
+	if fc.url != "" {
+		c.url = fc.url
 	}
 
-	if fc.Output != "" {
-		c.Output = fc.Output
+	if fc.output != "" {
+		c.output = fc.output
 	}
 
-	if fc.MaxDepth != 0 {
-		c.MaxDepth = fc.MaxDepth
+	if fc.maxDepth != 0 {
+		c.maxDepth = fc.maxDepth
 	}
 
-	if fc.Timeout != 0 {
-		c.Timeout = fc.Timeout
+	if fc.timeout != 0 {
+		c.timeout = fc.timeout
 	}
 
-	if fc.DepthIncStep != 0 {
-		c.DepthIncStep = fc.DepthIncStep
+	if fc.depthIncStep != 0 {
+		c.depthIncStep = fc.depthIncStep
 	}
 
-	if fc.NeedHelp {
-		c.NeedHelp = fc.NeedHelp
+	if fc.needHelp {
+		c.needHelp = fc.needHelp
 	}
 
-	if fc.JSONLog {
-		c.JSONLog = fc.JSONLog
+	if fc.jsonLog {
+		c.jsonLog = fc.jsonLog
 	}
 
-	if fc.WithPanic {
-		c.WithPanic = fc.WithPanic
+	if fc.withPanic {
+		c.withPanic = fc.withPanic
 	}
 
-	if fc.LogLevel != 0 {
-		c.LogLevel = fc.LogLevel
+	if fc.logLevel != 0 {
+		c.logLevel = fc.logLevel
 	}
 }
 
-func (c *Configuration) configureBaseLogger() {
-	zerolog.SetGlobalLevel(c.LogLevel)
+func (c *configuration) ConfigureBaseLogger() {
+	zerolog.SetGlobalLevel(c.logLevel)
 
-	if c.JSONLog {
+	if c.jsonLog {
 		zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 
 		return
@@ -212,68 +254,45 @@ func (c *Configuration) configureBaseLogger() {
 		Logger()
 }
 
-// Load Reads configuration from files (yaml, json), .env, environment variables or arguments and returns.
-func Load() (c Configuration, err error) {
+// New Reads configuration from files (yaml, json), .env, environment variables or arguments and returns.
+func New() (Configuration, error) {
 	fConf, cfgPath, err := readFlags()
 	if err != nil {
-		return
+		return nil, err
 	}
 
-	if err = c.loadFromEnv(); err != nil {
+	c := &configuration{} //nolint:exhaustivestruct
+
+	if err = c.LoadFromEnv(); err != nil {
 		if !errors.Is(err, os.ErrNotExist) {
-			return
+			return nil, err
 		}
 	}
 
-	if err = c.loadFromFile(cfgPath); err != nil {
-		return
+	if err = c.LoadFromFile(cfgPath); err != nil {
+		return nil, err
 	}
 
-	c.loadFromFlags(fConf)
-	c.configureBaseLogger()
+	c.LoadFromFlags(fConf)
+	c.ConfigureBaseLogger()
 
-	if err = c.validate(); err != nil {
-		return
+	if err = c.Validate(); err != nil {
+		return nil, err
 	}
 
-	return
+	return c, nil
 }
 
-func (c *Configuration) OutputToFile() bool {
-	return c.Output != ""
+func (c *configuration) OutputToFile() bool {
+	return c.output != ""
 }
 
-func (c Configuration) String() (result string) {
-	var (
-		confMap map[string]interface{}
-		err     error
-	)
-
-	if confMap, err = c.Map(); err != nil {
-		return
-	}
-
-	for key, value := range confMap {
-		result += key + ": " + fmt.Sprint(value) + "\n"
-	}
-
-	return
-}
-
-func (c *Configuration) Map() (result map[string]interface{}, err error) {
-	var confJSON []byte
-
-	if confJSON, err = json.Marshal(c); err != nil {
-		return
-	}
-
-	err = json.Unmarshal(confJSON, &result)
-
-	return
+func (c configuration) String() (result string) {
+	return fmt.Sprintf("%#v", c)
 }
 
 // ShowHelp - prints app help info
-func ShowHelp() {
+func (c *configuration) ShowHelp() {
 	fmt.Println(`
 About:
 Crawler is a program for find titles in URLs.
@@ -285,22 +304,22 @@ Examples of using:
 ./bin/crawler -u https://ya.ru -p # Fires panic and recover in first link`)
 }
 
-func readFlags() (c Configuration, path string, err error) {
+func readFlags() (c configuration, path string, err error) {
 	var ll string
 
-	flag.StringVar(&c.URL, "u", DefaultURL, "URL for parsing")
-	flag.Uint64Var(&c.MaxDepth, "m", DefaultMaxDepth, "Max depth")
-	flag.IntVar(&c.Timeout, "t", DefaultTimeout, "Timeout for request")
-	flag.IntVar(&c.DepthIncStep, "s", DefaultDepthStep, "Depth step")
-	flag.StringVar(&c.Output, "o", DefaultOutput, "Output - file path or empty for log in console")
-	flag.BoolVar(&c.NeedHelp, "h", DefaultNeedHelp, "Print help")
-	flag.BoolVar(&c.JSONLog, "j", DefaultJSONLog, "JSON log format")
-	flag.BoolVar(&c.WithPanic, "p", DefaultWithPanic, "Show test panic")
+	flag.StringVar(&c.url, "u", DefaultURL, "URL for parsing")
+	flag.Uint64Var(&c.maxDepth, "m", DefaultMaxDepth, "Max depth")
+	flag.IntVar(&c.timeout, "t", DefaultTimeout, "Timeout for request")
+	flag.IntVar(&c.depthIncStep, "s", DefaultDepthStep, "Depth step")
+	flag.StringVar(&c.output, "o", DefaultOutput, "Output - file path or empty for log in console")
+	flag.BoolVar(&c.needHelp, "h", DefaultNeedHelp, "Print help")
+	flag.BoolVar(&c.jsonLog, "j", DefaultJSONLog, "JSON log format")
+	flag.BoolVar(&c.withPanic, "p", DefaultWithPanic, "Show test panic")
 	flag.StringVar(&ll, "l", DefaultLogLevel, "Log level")
 	flag.StringVar(&path, "c", DefaultConfigFilePath, "Config file path")
 	flag.Parse()
 
-	if c.LogLevel, err = zerolog.ParseLevel(ll); err != nil {
+	if c.logLevel, err = zerolog.ParseLevel(ll); err != nil {
 		return
 	}
 

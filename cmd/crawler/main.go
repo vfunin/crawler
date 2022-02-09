@@ -23,18 +23,18 @@ func main() {
 
 	log.Trace().Msg("start crawler goroutine")
 
-	c := crawler.New(cfg.MaxDepth, cfg.Timeout)
-	go c.Crawl(ctx, cancel, cfg.URL, cfg.WithPanic, 0, errCh)
+	c := crawler.New(cfg.MaxDepth(), cfg.Timeout())
+	go c.Crawl(ctx, cancel, cfg.URL(), cfg.WithPanic(), 0, errCh)
 
 	log.Trace().Msg("start printer goroutine")
 
-	p := printer.New(ctx, cancel, &cfg, c, errCh)
+	p := printer.New(ctx, cancel, cfg, c, errCh)
 	go p.Print()
 
-	listenChannels(ctx, cancel, errCh, cfg.DepthIncStep, c)
+	listenChannels(ctx, cancel, errCh, cfg.DepthIncStep(), c)
 }
 
-func listenChannels(ctx context.Context, cancel context.CancelFunc, errCh <-chan error, depthStep int, c *crawler.Crawler) {
+func listenChannels(ctx context.Context, cancel context.CancelFunc, errCh <-chan error, depthStep int, c crawler.Crawler) {
 	stopCh := make(chan os.Signal, 1)
 	signal.Notify(stopCh, syscall.SIGINT)
 
@@ -60,10 +60,10 @@ func listenChannels(ctx context.Context, cancel context.CancelFunc, errCh <-chan
 }
 
 func handleConfiguration() config.Configuration {
-	cfg, err := config.Load()
+	cfg, err := config.New()
 
-	if cfg.NeedHelp {
-		config.ShowHelp()
+	if cfg.NeedHelp() {
+		cfg.ShowHelp()
 		os.Exit(0)
 	}
 

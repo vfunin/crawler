@@ -10,13 +10,26 @@ import (
 	"github.com/PuerkitoBio/goquery"
 )
 
-type Page struct {
-	Title string
-	Links []string
+type Page interface {
+	Parse(url string, reader io.Reader) (Page, error)
+	Title() string
+	Links() []string
+	parseTitle(doc *goquery.Document) string
+	parseLinks(doc *goquery.Document, baseURL string) (urls []string, err error)
+	formatURL(url string, baseURL string) (string, error)
+}
+
+type page struct {
+	title string
+	links []string
+}
+
+func New() Page {
+	return &page{title: "", links: nil}
 }
 
 // Parse - returns page title with links
-func Parse(url string, reader io.Reader) (*Page, error) {
+func (p *page) Parse(url string, reader io.Reader) (Page, error) {
 	var (
 		doc       *goquery.Document
 		err       error
@@ -34,21 +47,29 @@ func Parse(url string, reader io.Reader) (*Page, error) {
 
 	baseURL := fmt.Sprintf("%s://%s", parsedURL.Scheme, parsedURL.Host)
 
-	if links, err = getLinks(doc, baseURL); err != nil {
+	if links, err = p.parseLinks(doc, baseURL); err != nil {
 		return nil, errors.Wrap(err, "parser links list")
 	}
 
-	return &Page{
-		Title: getTitle(doc),
-		Links: links,
-	}, nil
+	p.title = p.parseTitle(doc)
+	p.links = links
+
+	return p, nil
 }
 
-func getTitle(doc *goquery.Document) string {
+func (p *page) Title() string {
+	return p.title
+}
+
+func (p *page) Links() []string {
+	return p.links
+}
+
+func (p *page) parseTitle(doc *goquery.Document) string {
 	return doc.Find("title").First().Text()
 }
 
-func getLinks(doc *goquery.Document, baseURL string) (urls []string, err error) {
+func (p *page) parseLinks(doc *goquery.Document, baseURL string) (urls []string, err error) {
 	fURL := ""
 
 	doc.Find("a").Each(func(_ int, s *goquery.Selection) {
@@ -56,7 +77,7 @@ func getLinks(doc *goquery.Document, baseURL string) (urls []string, err error) 
 		if !ok {
 			return
 		}
-		if fURL, err = formatURL(url, baseURL); err != nil {
+		if fURL, err = p.formatURL(url, baseURL); err != nil {
 			return
 		}
 		urls = append(urls, fURL)
@@ -65,7 +86,7 @@ func getLinks(doc *goquery.Document, baseURL string) (urls []string, err error) 
 	return
 }
 
-func formatURL(url string, baseURL string) (string, error) {
+func (p *page) formatURL(url string, baseURL string) (string, error) {
 	parsedURL, err := netURL.Parse(url)
 	if err != nil {
 		return "", err

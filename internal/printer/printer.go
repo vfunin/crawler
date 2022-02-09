@@ -11,20 +11,25 @@ import (
 	"github.com/pkg/errors"
 )
 
-type Printer struct {
+type Printer interface {
+	Print()
+	prepareOutputFile() (writer *csv.Writer, outputFile *os.File)
+}
+
+type printer struct {
 	ctx     context.Context
 	cancel  context.CancelFunc
-	cfg     *config.Configuration
-	crawler *crawler.Crawler
+	cfg     config.Configuration
+	crawler crawler.Crawler
 	errCh   chan<- error
 }
 
-func New(ctx context.Context, cancel context.CancelFunc, cfg *config.Configuration, crawler *crawler.Crawler, errCh chan<- error) *Printer {
-	return &Printer{ctx: ctx, cancel: cancel, cfg: cfg, errCh: errCh, crawler: crawler}
+func New(ctx context.Context, cancel context.CancelFunc, cfg config.Configuration, crawler crawler.Crawler, errCh chan<- error) Printer {
+	return &printer{ctx: ctx, cancel: cancel, cfg: cfg, errCh: errCh, crawler: crawler}
 }
 
 // Print - outputs links to the console or saves to a file
-func (p *Printer) Print() {
+func (p *printer) Print() {
 	var (
 		err        error
 		outputFile *os.File
@@ -65,10 +70,10 @@ func (p *Printer) Print() {
 	}
 }
 
-func (p *Printer) prepareOutputFile() (writer *csv.Writer, outputFile *os.File) {
+func (p *printer) prepareOutputFile() (writer *csv.Writer, outputFile *os.File) {
 	var err error
 
-	if outputFile, err = os.Create(p.cfg.Output); err != nil {
+	if outputFile, err = os.Create(p.cfg.Output()); err != nil {
 		p.errCh <- errors.Wrap(err, "printer file creation")
 		p.cancel()
 

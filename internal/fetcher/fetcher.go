@@ -9,16 +9,20 @@ import (
 	"github.com/pkg/errors"
 )
 
-type Fetcher struct {
+type Fetcher interface {
+	Fetch(ctx context.Context, url string) (page parser.Page, err error)
+}
+
+type fetcher struct {
 	timeout time.Duration
 }
 
-func New(timeout time.Duration) *Fetcher {
-	return &Fetcher{timeout: timeout}
+func New(timeout time.Duration) Fetcher {
+	return &fetcher{timeout: timeout}
 }
 
-// Fetch - makes a request for a link and returns a parser.Page with title and a slice of links on the page
-func (f Fetcher) Fetch(ctx context.Context, url string) (page *parser.Page, err error) {
+// Fetch - makes a request for a link and returns a parser.page with title and a slice of links on the page
+func (f *fetcher) Fetch(ctx context.Context, url string) (page parser.Page, err error) {
 	var (
 		resp *http.Response
 		req  *http.Request
@@ -43,7 +47,9 @@ func (f Fetcher) Fetch(ctx context.Context, url string) (page *parser.Page, err 
 			return nil, errors.Wrap(err, "response")
 		}
 		defer resp.Body.Close()
-		page, err = parser.Parse(url, resp.Body)
+
+		page = parser.New()
+		page, err = page.Parse(url, resp.Body)
 
 		if err != nil {
 			return nil, errors.Wrap(err, "parsing url")
