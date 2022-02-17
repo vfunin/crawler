@@ -155,7 +155,7 @@ func (c *configuration) FillFromEnv() (err error) {
 
 func (c *configuration) Validate() (err error) {
 	if _, err = url.ParseRequestURI(c.url); err != nil {
-		return fmt.Errorf("wrong url; %w", err)
+		return errors.New("wrong url (" + c.url + "); error: " + err.Error())
 	}
 
 	return

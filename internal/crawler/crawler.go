@@ -4,9 +4,11 @@ import (
 	"context"
 	"crawler/internal/config"
 	"crawler/internal/fetcher"
-	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
+
+	"github.com/pkg/errors"
 
 	"github.com/rs/zerolog"
 )
@@ -21,26 +23,22 @@ type Crawler interface {
 	IncMaxDepth(step uint64)
 	IncCnt()
 	DecCnt()
-	GetCnt() uint64
+	GetCnt() int64
 	ResultCh() <-chan Result
-	setVisited(url string)
-	isVisited(url string) bool
-	canGoDeeper(depth uint64) bool
-	recoverAndCount(log zerolog.Logger)
 }
 
 type crawler struct {
-	mu                sync.Mutex
+	mu                sync.RWMutex
 	result            chan Result
 	visited           map[string]struct{}
 	maxDepth          uint64
 	connectionTimeout int
-	cnt               uint64
+	cnt               int64
 }
 
 func New(depth uint64, connectionTimeout int) Crawler {
 	return &crawler{
-		mu:                sync.Mutex{},
+		mu:                sync.RWMutex{},
 		result:            make(chan Result),
 		visited:           make(map[string]struct{}),
 		maxDepth:          depth,
@@ -50,26 +48,20 @@ func New(depth uint64, connectionTimeout int) Crawler {
 }
 
 func (c *crawler) IncMaxDepth(step uint64) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.maxDepth += step
+	atomic.AddUint64(&c.maxDepth, step)
 }
 
 func (c *crawler) IncCnt() {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.cnt++
+	atomic.AddInt64(&c.cnt, 1)
 }
 
 func (c *crawler) DecCnt() {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.cnt--
+	atomic.AddInt64(&c.cnt, -1)
 }
 
-func (c *crawler) GetCnt() uint64 {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+func (c *crawler) GetCnt() int64 {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 
 	return c.cnt
 }
@@ -86,8 +78,8 @@ func (c *crawler) ResultCh() <-chan Result {
 }
 
 func (c *crawler) isVisited(url string) bool {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 	_, ok := c.visited[url]
 
 	return ok
@@ -101,7 +93,7 @@ func (c *crawler) recoverAndCount(log zerolog.Logger) {
 	c.DecCnt()
 
 	if iErr := recover(); iErr != nil {
-		err := fmt.Errorf("url: %v", iErr)
+		err := errors.New("url: " + iErr.(string))
 
 		log.Err(err).Msg("panic during link parsing")
 	}
