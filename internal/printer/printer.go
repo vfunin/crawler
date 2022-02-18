@@ -2,18 +2,18 @@ package printer
 
 import (
 	"context"
-	"crawler/internal/config"
-	"crawler/internal/crawler"
 	"encoding/csv"
 	"fmt"
 	"os"
+
+	"github.com/vfunin/crawler/internal/config"
+	"github.com/vfunin/crawler/internal/crawler"
 
 	"github.com/pkg/errors"
 )
 
 type Printer interface {
 	Print()
-	prepareOutputFile() (writer *csv.Writer, outputFile *os.File)
 }
 
 type printer struct {
@@ -61,7 +61,7 @@ func (p *printer) Print() {
 				break
 			}
 
-			fmt.Println(msg.URL, ";", msg.Title)
+			fmt.Printf("%s;%s\n", msg.URL, msg.Title)
 		default:
 			if p.crawler.GetCnt() == 0 {
 				p.cancel()
