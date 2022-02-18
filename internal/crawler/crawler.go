@@ -2,11 +2,12 @@ package crawler
 
 import (
 	"context"
-	"crawler/internal/config"
-	"crawler/internal/fetcher"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/vfunin/crawler/internal/config"
+	"github.com/vfunin/crawler/internal/fetcher"
 
 	"github.com/pkg/errors"
 
