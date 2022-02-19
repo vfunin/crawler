@@ -3,12 +3,25 @@ package config
 import (
 	"fmt"
 	"os"
+	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 )
+
+type fields struct {
+	needHelp     bool
+	url          string
+	maxDepth     uint64
+	timeout      int
+	depthIncStep int
+	output       string
+	jsonLog      bool
+	withPanic    bool
+	logLevel     zerolog.Level
+}
 
 func TestNew(t *testing.T) {
 	var (
@@ -27,18 +40,6 @@ func TestNew(t *testing.T) {
 }
 
 func TestDepthIncStep(t *testing.T) {
-	type fields struct {
-		needHelp     bool
-		url          string
-		maxDepth     uint64
-		timeout      int
-		depthIncStep int
-		output       string
-		jsonLog      bool
-		withPanic    bool
-		logLevel     zerolog.Level
-	}
-
 	tests := []struct {
 		name    string
 		fields  fields
@@ -116,18 +117,6 @@ func TestDepthIncStep(t *testing.T) {
 }
 
 func TestJSONLog(t *testing.T) {
-	type fields struct {
-		needHelp     bool
-		url          string
-		maxDepth     uint64
-		timeout      int
-		depthIncStep int
-		output       string
-		jsonLog      bool
-		withPanic    bool
-		logLevel     zerolog.Level
-	}
-
 	tests := []struct {
 		name    string
 		fields  fields
@@ -205,18 +194,6 @@ func TestJSONLog(t *testing.T) {
 }
 
 func TestLogLevel(t *testing.T) {
-	type fields struct {
-		needHelp     bool
-		url          string
-		maxDepth     uint64
-		timeout      int
-		depthIncStep int
-		output       string
-		jsonLog      bool
-		withPanic    bool
-		logLevel     zerolog.Level
-	}
-
 	tests := []struct {
 		name    string
 		fields  fields
@@ -294,18 +271,6 @@ func TestLogLevel(t *testing.T) {
 }
 
 func TestMaxDepth(t *testing.T) {
-	type fields struct {
-		needHelp     bool
-		url          string
-		maxDepth     uint64
-		timeout      int
-		depthIncStep int
-		output       string
-		jsonLog      bool
-		withPanic    bool
-		logLevel     zerolog.Level
-	}
-
 	tests := []struct {
 		name    string
 		fields  fields
@@ -383,18 +348,6 @@ func TestMaxDepth(t *testing.T) {
 }
 
 func TestNeedHelp(t *testing.T) {
-	type fields struct {
-		needHelp     bool
-		url          string
-		maxDepth     uint64
-		timeout      int
-		depthIncStep int
-		output       string
-		jsonLog      bool
-		withPanic    bool
-		logLevel     zerolog.Level
-	}
-
 	tests := []struct {
 		name    string
 		fields  fields
@@ -472,18 +425,6 @@ func TestNeedHelp(t *testing.T) {
 }
 
 func TestOutput(t *testing.T) {
-	type fields struct {
-		needHelp     bool
-		url          string
-		maxDepth     uint64
-		timeout      int
-		depthIncStep int
-		output       string
-		jsonLog      bool
-		withPanic    bool
-		logLevel     zerolog.Level
-	}
-
 	tests := []struct {
 		name    string
 		fields  fields
@@ -561,18 +502,6 @@ func TestOutput(t *testing.T) {
 }
 
 func TestOutputToFile(t *testing.T) {
-	type fields struct {
-		needHelp     bool
-		url          string
-		maxDepth     uint64
-		timeout      int
-		depthIncStep int
-		output       string
-		jsonLog      bool
-		withPanic    bool
-		logLevel     zerolog.Level
-	}
-
 	tests := []struct {
 		name    string
 		fields  fields
@@ -674,18 +603,6 @@ func ExampleConfiguration_ShowHelp() {
 }
 
 func TestString(t *testing.T) {
-	type fields struct {
-		needHelp     bool
-		url          string
-		maxDepth     uint64
-		timeout      int
-		depthIncStep int
-		output       string
-		jsonLog      bool
-		withPanic    bool
-		logLevel     zerolog.Level
-	}
-
 	tests := []struct {
 		name       string
 		fields     fields
@@ -763,18 +680,6 @@ func TestString(t *testing.T) {
 }
 
 func TestTimeout(t *testing.T) {
-	type fields struct {
-		needHelp     bool
-		url          string
-		maxDepth     uint64
-		timeout      int
-		depthIncStep int
-		output       string
-		jsonLog      bool
-		withPanic    bool
-		logLevel     zerolog.Level
-	}
-
 	tests := []struct {
 		name    string
 		fields  fields
@@ -852,18 +757,6 @@ func TestTimeout(t *testing.T) {
 }
 
 func TestURL(t *testing.T) {
-	type fields struct {
-		needHelp     bool
-		url          string
-		maxDepth     uint64
-		timeout      int
-		depthIncStep int
-		output       string
-		jsonLog      bool
-		withPanic    bool
-		logLevel     zerolog.Level
-	}
-
 	tests := []struct {
 		name    string
 		fields  fields
@@ -941,18 +834,6 @@ func TestURL(t *testing.T) {
 }
 
 func TestWithPanic(t *testing.T) {
-	type fields struct {
-		needHelp     bool
-		url          string
-		maxDepth     uint64
-		timeout      int
-		depthIncStep int
-		output       string
-		jsonLog      bool
-		withPanic    bool
-		logLevel     zerolog.Level
-	}
-
 	tests := []struct {
 		name    string
 		fields  fields
@@ -1052,4 +933,352 @@ func ExampleConfiguration_configureBaseLogger() {
 
 	log.Info().Msg("test")
 	// Output: <nil> INFO  | test
+}
+
+func Test_configuration_fillFromEnv(t *testing.T) {
+	c := &configuration{
+		needHelp:     false,
+		url:          "test",
+		maxDepth:     0,
+		timeout:      0,
+		depthIncStep: 0,
+		output:       "",
+		jsonLog:      false,
+		withPanic:    false,
+		logLevel:     0,
+	}
+
+	err := c.fillFromEnv()
+
+	assert.Nil(t, err, "error is not nil")
+
+	tests := []struct {
+		name    string
+		envName string
+		value   string
+		wantErr bool
+	}{
+		{
+			name:    "check timeout success",
+			envName: "TIMEOUT",
+			value:   "timeout",
+			wantErr: true,
+		},
+		{
+			name:    "check timeout error",
+			envName: "TIMEOUT",
+			value:   "2",
+			wantErr: false,
+		},
+		{
+			name:    "check URL success",
+			envName: "URL",
+			value:   "URL",
+			wantErr: false,
+		},
+		{
+			name:    "check OUTPUT success",
+			envName: "OUTPUT",
+			value:   "test",
+			wantErr: false,
+		},
+		{
+			name:    "check MAX_DEPTH success",
+			envName: "MAX_DEPTH",
+			value:   "2",
+			wantErr: false,
+		},
+		{
+			name:    "check MAX_DEPTH error",
+			envName: "MAX_DEPTH",
+			value:   "MAX_DEPTH",
+			wantErr: true,
+		},
+		{
+			name:    "check DEPTH_INC_STEP success",
+			envName: "DEPTH_INC_STEP",
+			value:   "2",
+			wantErr: false,
+		},
+		{
+			name:    "check DEPTH_INC_STEP error",
+			envName: "DEPTH_INC_STEP",
+			value:   "DEPTH_INC_STEP",
+			wantErr: true,
+		},
+		{
+			name:    "check LOG_LEVEL success",
+			envName: "LOG_LEVEL",
+			value:   "info",
+			wantErr: false,
+		},
+		{
+			name:    "check LOG_LEVEL error",
+			envName: "LOG_LEVEL",
+			value:   "test_level",
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			os.Clearenv()
+			err = os.Setenv(tt.envName, tt.value)
+			assert.Nil(t, err, tt.envName+" - can't set env")
+			err = c.fillFromEnv()
+			if tt.wantErr {
+				assert.NotNil(t, err, tt.envName)
+
+				return
+			}
+
+			assert.Nil(t, err, tt.envName)
+		})
+	}
+
+	os.Clearenv()
+}
+
+func Test_configuration_loadFromEnv(t *testing.T) {
+	c := &configuration{
+		needHelp:     false,
+		url:          "test",
+		maxDepth:     0,
+		timeout:      0,
+		depthIncStep: 0,
+		output:       "",
+		jsonLog:      false,
+		withPanic:    false,
+		logLevel:     0,
+	}
+
+	err := os.Setenv("TIMEOUT", "2")
+	assert.Nil(t, err, "Timeout - can't set env")
+	err = c.loadFromEnv()
+	assert.Nil(t, err, "error is not nil")
+	os.Clearenv()
+	err = os.Setenv("TIMEOUT", "test")
+	assert.Nil(t, err, "Timeout - can't set env")
+	err = c.loadFromEnv()
+	assert.NotNil(t, err, "error is not nil")
+}
+
+func Test_configuration_loadFromFile(t *testing.T) {
+	type args struct {
+		path string
+	}
+
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "normal file",
+			args: args{
+				path: "test.yaml",
+			},
+			wantErr: true,
+		},
+		{
+			name: "wrong file type",
+			args: args{
+				path: "test.cfg",
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &configuration{
+				needHelp:     false,
+				url:          "test",
+				maxDepth:     0,
+				timeout:      0,
+				depthIncStep: 0,
+				output:       "",
+				jsonLog:      false,
+				withPanic:    false,
+				logLevel:     0,
+			}
+			if err := c.loadFromFile(tt.args.path); (err != nil) != tt.wantErr {
+				t.Errorf("loadFromFile() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func Test_configuration_loadFromFlags(t *testing.T) {
+	type args struct {
+		fc configuration
+	}
+
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+	}{
+		{
+			name: "normal case",
+			fields: fields{
+				needHelp:     false,
+				url:          "",
+				maxDepth:     0,
+				timeout:      0,
+				depthIncStep: 0,
+				output:       "",
+				jsonLog:      false,
+				withPanic:    false,
+				logLevel:     0,
+			},
+			args: args{
+				fc: configuration{
+					needHelp:     true,
+					url:          "test",
+					maxDepth:     2,
+					timeout:      3,
+					depthIncStep: 4,
+					output:       "test",
+					jsonLog:      true,
+					withPanic:    true,
+					logLevel:     1,
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &configuration{
+				needHelp:     tt.fields.needHelp,
+				url:          tt.fields.url,
+				maxDepth:     tt.fields.maxDepth,
+				timeout:      tt.fields.timeout,
+				depthIncStep: tt.fields.depthIncStep,
+				output:       tt.fields.output,
+				jsonLog:      tt.fields.jsonLog,
+				withPanic:    tt.fields.withPanic,
+				logLevel:     tt.fields.logLevel,
+			}
+			c.loadFromFlags(tt.args.fc)
+		})
+	}
+}
+
+func Test_configuration_validate(t *testing.T) {
+	tests := []struct {
+		name    string
+		fields  fields
+		wantErr bool
+	}{
+		{
+			name: "normal url",
+			fields: fields{
+				needHelp:     false,
+				url:          "https://test.ru",
+				maxDepth:     0,
+				timeout:      0,
+				depthIncStep: 0,
+				output:       "",
+				jsonLog:      false,
+				withPanic:    false,
+				logLevel:     0,
+			},
+			wantErr: false,
+		},
+		{
+			name: "wrong url",
+			fields: fields{
+				needHelp:     true,
+				url:          "not-url",
+				maxDepth:     1,
+				timeout:      1,
+				depthIncStep: 1,
+				output:       "none",
+				jsonLog:      true,
+				withPanic:    true,
+				logLevel:     2,
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &configuration{
+				needHelp:     tt.fields.needHelp,
+				url:          tt.fields.url,
+				maxDepth:     tt.fields.maxDepth,
+				timeout:      tt.fields.timeout,
+				depthIncStep: tt.fields.depthIncStep,
+				output:       tt.fields.output,
+				jsonLog:      tt.fields.jsonLog,
+				withPanic:    tt.fields.withPanic,
+				logLevel:     tt.fields.logLevel,
+			}
+			if err := c.validate(); (err != nil) != tt.wantErr {
+				t.Errorf("validate() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func Test_fillEnv(t *testing.T) {
+	tests := []struct {
+		name    string
+		wantErr bool
+	}{
+		{
+			name:    "normal case",
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := fillEnv(); (err != nil) != tt.wantErr {
+				t.Errorf("fillEnv() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func Test_remove(t *testing.T) {
+	type args struct {
+		s []string
+		i int
+	}
+
+	tests := []struct {
+		name    string
+		args    args
+		want    []string
+		wantErr bool
+	}{
+		{
+			name: "normal case",
+			args: args{
+				s: []string{"1", "2", "3"},
+				i: 1,
+			},
+			want:    []string{"1", "3"},
+			wantErr: false,
+		},
+		{
+			name: "error case",
+			args: args{
+				s: []string{"1", "2", "3"},
+				i: 2,
+			},
+			want:    []string{"2"},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := remove(tt.args.s, tt.args.i); !reflect.DeepEqual(got, tt.want) && !tt.wantErr {
+				t.Errorf("remove() = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }
