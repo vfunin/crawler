@@ -25,6 +25,7 @@ type Crawler interface {
 	IncCnt()
 	DecCnt()
 	GetCnt() int64
+	MaxDepth() uint64
 	ResultCh() <-chan Result
 }
 
@@ -65,6 +66,13 @@ func (c *crawler) GetCnt() int64 {
 	defer c.mu.RUnlock()
 
 	return c.cnt
+}
+
+func (c *crawler) MaxDepth() uint64 {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	return c.maxDepth
 }
 
 func (c *crawler) setVisited(url string) {
