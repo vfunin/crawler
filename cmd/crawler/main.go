@@ -2,12 +2,13 @@ package main
 
 import (
 	"context"
-	"crawler/internal/config"
-	"crawler/internal/crawler"
-	"crawler/internal/printer"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/vfunin/crawler/internal/config"
+	"github.com/vfunin/crawler/internal/crawler"
+	"github.com/vfunin/crawler/internal/printer"
 
 	"github.com/rs/zerolog/log"
 )

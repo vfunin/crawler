@@ -2,11 +2,12 @@ package printer
 
 import (
 	"context"
-	"crawler/internal/config"
-	"crawler/internal/crawler"
 	"encoding/csv"
 	"fmt"
 	"os"
+
+	"github.com/vfunin/crawler/internal/config"
+	"github.com/vfunin/crawler/internal/crawler"
 
 	"github.com/pkg/errors"
 )

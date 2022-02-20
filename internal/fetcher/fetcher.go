@@ -2,9 +2,10 @@ package fetcher
 
 import (
 	"context"
-	"crawler/internal/parser"
 	"net/http"
 	"time"
+
+	"github.com/vfunin/crawler/internal/parser"
 
 	"github.com/pkg/errors"
 )

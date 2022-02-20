@@ -41,12 +41,6 @@ const (
 )
 
 type Configuration interface {
-	FillFromEnv() (err error)
-	Validate() (err error)
-	LoadFromEnv() (err error)
-	LoadFromFile(path string) (err error)
-	LoadFromFlags(fc configuration)
-	ConfigureBaseLogger()
 	OutputToFile() bool
 	String() (result string)
 	ShowHelp()
@@ -56,9 +50,7 @@ type Configuration interface {
 	Timeout() int
 	DepthIncStep() int
 	Output() string
-	JSONLog() bool
 	WithPanic() bool
-	LogLevel() zerolog.Level
 }
 
 type configuration struct {
@@ -109,7 +101,7 @@ func (c *configuration) LogLevel() zerolog.Level {
 	return c.logLevel
 }
 
-func (c *configuration) FillFromEnv() (err error) {
+func (c *configuration) fillFromEnv() (err error) {
 	if value := os.Getenv("URL"); value != "" {
 		c.url = value
 	}
@@ -153,7 +145,7 @@ func (c *configuration) FillFromEnv() (err error) {
 	return err
 }
 
-func (c *configuration) Validate() (err error) {
+func (c *configuration) validate() (err error) {
 	if _, err = url.ParseRequestURI(c.url); err != nil {
 		return errors.New("wrong url (" + c.url + "); error: " + err.Error())
 	}
@@ -161,19 +153,19 @@ func (c *configuration) Validate() (err error) {
 	return
 }
 
-func (c *configuration) LoadFromEnv() (err error) {
+func (c *configuration) loadFromEnv() (err error) {
 	if err = fillEnv(); err != nil {
 		return
 	}
 
-	if err = c.FillFromEnv(); err != nil {
+	if err = c.fillFromEnv(); err != nil {
 		return
 	}
 
 	return
 }
 
-func (c *configuration) LoadFromFile(path string) (err error) {
+func (c *configuration) loadFromFile(path string) (err error) {
 	var content []byte
 
 	if filepath.Ext(path) != ".yaml" {
@@ -189,7 +181,7 @@ func (c *configuration) LoadFromFile(path string) (err error) {
 	return
 }
 
-func (c *configuration) LoadFromFlags(fc configuration) {
+func (c *configuration) loadFromFlags(fc configuration) {
 	if fc.url != "" {
 		c.url = fc.url
 	}
@@ -227,7 +219,7 @@ func (c *configuration) LoadFromFlags(fc configuration) {
 	}
 }
 
-func (c *configuration) ConfigureBaseLogger() {
+func (c *configuration) configureBaseLogger() {
 	zerolog.SetGlobalLevel(c.logLevel)
 
 	if c.jsonLog {
@@ -263,20 +255,20 @@ func New() (Configuration, error) {
 
 	c := &configuration{} //nolint:exhaustivestruct
 
-	if err = c.LoadFromEnv(); err != nil {
+	if err = c.loadFromEnv(); err != nil {
 		if !errors.Is(err, os.ErrNotExist) {
 			return nil, err
 		}
 	}
 
-	if err = c.LoadFromFile(cfgPath); err != nil {
+	if err = c.loadFromFile(cfgPath); err != nil {
 		return nil, err
 	}
 
-	c.LoadFromFlags(fConf)
-	c.ConfigureBaseLogger()
+	c.loadFromFlags(fConf)
+	c.configureBaseLogger()
 
-	if err = c.Validate(); err != nil {
+	if err = c.validate(); err != nil {
 		return nil, err
 	}
 
@@ -337,6 +329,10 @@ func fillEnv() (err error) {
 		if strings.Contains(fileName, EnvExclude) {
 			matches = remove(matches, i)
 		}
+	}
+
+	if len(matches) == 0 {
+		return
 	}
 
 	return godotenv.Overload(matches...)
