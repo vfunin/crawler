@@ -63,15 +63,15 @@ func (_m *Crawler) MaxDepth() uint64 {
 }
 
 // ResultCh provides a mock function with given fields:
-func (_m *Crawler) ResultCh() <-chan crawler.Result {
+func (_m *Crawler) ResultCh() chan crawler.Result {
 	ret := _m.Called()
 
-	var r0 <-chan crawler.Result
-	if rf, ok := ret.Get(0).(func() <-chan crawler.Result); ok {
+	var r0 chan crawler.Result
+	if rf, ok := ret.Get(0).(func() chan crawler.Result); ok {
 		r0 = rf()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(<-chan crawler.Result)
+			r0 = ret.Get(0).(chan crawler.Result)
 		}
 	}
 

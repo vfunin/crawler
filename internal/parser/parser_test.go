@@ -15,7 +15,7 @@ func TestNew(t *testing.T) {
 	assert.NotNil(t, p)
 }
 
-func Test_page_Links(t *testing.T) {
+func TestLinks(t *testing.T) {
 	var (
 		r   *os.File
 		err error
@@ -35,7 +35,7 @@ func Test_page_Links(t *testing.T) {
 	assert.Equal(t, ex, p.Links())
 }
 
-func Test_page_Parse(t *testing.T) {
+func TestParse(t *testing.T) {
 	var (
 		r   *os.File
 		err error
@@ -51,7 +51,7 @@ func Test_page_Parse(t *testing.T) {
 	assert.Nil(t, err)
 }
 
-func Test_page_Title(t *testing.T) {
+func TestTitle(t *testing.T) {
 	var (
 		r   *os.File
 		err error

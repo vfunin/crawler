@@ -26,7 +26,7 @@ type Crawler interface {
 	DecCnt()
 	GetCnt() int64
 	MaxDepth() uint64
-	ResultCh() <-chan Result
+	ResultCh() chan Result
 }
 
 type crawler struct {
@@ -82,7 +82,7 @@ func (c *crawler) setVisited(url string) {
 	c.visited[url] = struct{}{}
 }
 
-func (c *crawler) ResultCh() <-chan Result {
+func (c *crawler) ResultCh() chan Result {
 	return c.result
 }
 
