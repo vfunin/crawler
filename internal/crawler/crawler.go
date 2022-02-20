@@ -2,11 +2,11 @@ package crawler
 
 import (
 	"context"
-	"crawler/internal/config"
-	"crawler/internal/fetcher"
 	"sync"
-	"sync/atomic"
 	"time"
+
+	"github.com/vfunin/crawler/internal/config"
+	"github.com/vfunin/crawler/internal/fetcher"
 
 	"github.com/pkg/errors"
 
@@ -24,7 +24,8 @@ type Crawler interface {
 	IncCnt()
 	DecCnt()
 	GetCnt() int64
-	ResultCh() <-chan Result
+	MaxDepth() uint64
+	ResultCh() chan Result
 }
 
 type crawler struct {
@@ -48,15 +49,21 @@ func New(depth uint64, connectionTimeout int) Crawler {
 }
 
 func (c *crawler) IncMaxDepth(step uint64) {
-	atomic.AddUint64(&c.maxDepth, step)
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.maxDepth += step
 }
 
 func (c *crawler) IncCnt() {
-	atomic.AddInt64(&c.cnt, 1)
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.cnt++
 }
 
 func (c *crawler) DecCnt() {
-	atomic.AddInt64(&c.cnt, -1)
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.cnt--
 }
 
 func (c *crawler) GetCnt() int64 {
@@ -66,6 +73,13 @@ func (c *crawler) GetCnt() int64 {
 	return c.cnt
 }
 
+func (c *crawler) MaxDepth() uint64 {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	return c.maxDepth
+}
+
 func (c *crawler) setVisited(url string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -73,7 +87,7 @@ func (c *crawler) setVisited(url string) {
 	c.visited[url] = struct{}{}
 }
 
-func (c *crawler) ResultCh() <-chan Result {
+func (c *crawler) ResultCh() chan Result {
 	return c.result
 }
 

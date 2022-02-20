@@ -3,12 +3,10 @@ on:
   push:
     tags:
       - v*
-    branches:
+    branches-ignore:
       - master
       - main
   pull_request:
-permissions:
-  contents: read
 jobs:
   golangci:
     name: lint

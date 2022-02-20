@@ -1,23 +1,25 @@
 .PHONY: build
 build:
-	go build -o bin/crawler cmd/crawler/main.go
-
-.PHONY: all
-all:
+	@echo 'Start build'
 	@go build -o bin/crawler cmd/crawler/main.go
 	@echo 'The app was successfully built at ./bin/crawler '
-	@./bin/crawler -h
+
+.PHONY: all
+all: lint test build run
 
 .PHONY: run
 run:
-	go run cmd/crawler/main.go
+	@echo 'Start app'
+	@./bin/crawler -h
 
 .PHONY: test
 test:
+	@echo 'Start tests'
 	go test -covermode=atomic ./...
 
 .PHONY: lint
 lint:
+	@echo 'Start lint'
 	golangci-lint run
 
 .PHONY: clean
