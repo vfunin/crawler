@@ -1,2 +1,2 @@
 # crawler
-[![codecov](https://codecov.io/gh/vfunin/crawler/branch/master/graph/badge.svg)](https://codecov.io/gh/vfunin/crawler)
+[![codecov](https://codecov.io/gh/vfunin/crawler/branch/main/graph/badge.svg?token=BA952ZCZ94)](https://codecov.io/gh/vfunin/crawler)
