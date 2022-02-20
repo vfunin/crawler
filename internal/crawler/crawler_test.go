@@ -20,7 +20,7 @@ func TestNew(t *testing.T) {
 }
 
 func TestCrawl(t *testing.T) {
-	log.Level(zerolog.TraceLevel)
+	log.Level(zerolog.Disabled)
 	cwv := context.WithValue(context.Background(), config.LoggerCtxKey, log.Logger)
 	ctx, cancel := context.WithCancel(cwv)
 
@@ -50,7 +50,7 @@ func TestCrawl(t *testing.T) {
 		}
 	}()
 
-	time.Sleep(time.Second)
+	time.Sleep(1 * time.Second)
 
 	c := New(0, 0)
 
