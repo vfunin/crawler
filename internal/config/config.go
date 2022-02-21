@@ -269,7 +269,7 @@ func New() (Configuration, error) {
 	c.configureBaseLogger()
 
 	if err = c.validate(); err != nil {
-		return nil, err
+		return c, err
 	}
 
 	return c, nil
