@@ -1,8 +1,12 @@
 # crawler
-[![codecov](https://codecov.io/gh/vfunin/crawler/branch/main/graph/badge.svg?token=BA952ZCZ94)](https://codecov.io/gh/vfunin/crawler)
+[![codecov](https://codecov.io/gh/vfunin/crawler/branch/main/graph/badge.svg?token=BA952ZCZ94)](https://codecov.io/gh/vfunin/crawler) ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/vfunin/crawler)
 
 Crawler is a program for find titles in URLs.
 
+Run:
+```shell
+make run
+```
 Examples of using:
 ```shell
 ./bin/crawler -u https://ya.ru # Finds all links and title up to the second level of nesting and outputs to the console

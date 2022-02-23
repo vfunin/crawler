@@ -3,6 +3,7 @@ package crawler
 import (
 	"context"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/vfunin/crawler/internal/config"
@@ -49,35 +50,23 @@ func New(depth uint64, connectionTimeout int) Crawler {
 }
 
 func (c *crawler) IncMaxDepth(step uint64) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.maxDepth += step
+	atomic.AddUint64(&c.maxDepth, step)
 }
 
 func (c *crawler) IncCnt() {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.cnt++
+	atomic.AddInt64(&c.cnt, 1)
 }
 
 func (c *crawler) DecCnt() {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.cnt--
+	atomic.AddInt64(&c.cnt, -1)
 }
 
 func (c *crawler) GetCnt() int64 {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-
-	return c.cnt
+	return atomic.LoadInt64(&c.cnt)
 }
 
 func (c *crawler) MaxDepth() uint64 {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-
-	return c.maxDepth
+	return atomic.LoadUint64(&c.maxDepth)
 }
 
 func (c *crawler) setVisited(url string) {
