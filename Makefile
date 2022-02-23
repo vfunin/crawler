@@ -8,14 +8,14 @@ build:
 all: lint test build run
 
 .PHONY: run
-run:
+run: build
 	@echo 'Start app'
 	@./bin/crawler -h
 
 .PHONY: test
 test:
 	@echo 'Start tests'
-	go test -covermode=atomic ./...
+	go test -race -coverprofile=coverage.txt -covermode=atomic --tags=integration ./...
 
 .PHONY: lint
 lint:
