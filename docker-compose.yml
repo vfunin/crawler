@@ -1,0 +1,25 @@
+version: "3"
+
+services:
+
+  registry:
+    image: registry:2
+    container_name: registry
+    ports:
+      - "5001:5000"
+    restart: unless-stopped
+    networks:
+      - crawler
+
+  crawler:
+    image: 127.0.0.1:5001/crawler:latest
+    container_name: crawler
+    build: .
+    restart: "no"
+    depends_on:
+      - registry
+    networks:
+      - crawler
+
+networks:
+  crawler:
